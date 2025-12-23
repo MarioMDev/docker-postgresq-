@@ -64,5 +64,85 @@ VALUES
 ((SELECT id FROM roles WHERE code = 'ATHLETE'), 'Marta', 'Torres', 'marta.athlete@email.com', 'hash_at5', '+34600000005', '1993-06-14', (SELECT id FROM users WHERE email = 'carlos.owner@gym.com'));
 
 
+CREATE TABLE IF NOT EXISTS activities ( 
+    id GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_by INT,
+    updated_by INT,
+    
+    CONSTRAINT fk_activities_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    CONSTRAINT fk_activities_updated_by FOREIGN KEY (updated_by) REFERENCES users(id)
+);
+
 CREATE TABLE IF NOT EXISTS classes (
+    id GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    activity_id INT NOT NULL,
+    description TEXT,
+    capacity_limit INT NOT NULL,
+    default_coach_id INT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_by INT,
+    updated_by INT,
+    
+    CONSTRAINT fk_classes_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    CONSTRAINT fk_classes_updated_by FOREIGN KEY (updated_by) REFERENCES users(id),
+    CONSTRAINT fk_classes_activity FOREIGN KEY (activity_id) REFERENCES activities(id),
+    CONSTRAINT fk_classes_default_coach FOREIGN KEY (default_coach_id) REFERENCES users(id)
+);
+
+-- 1. Insertar Actividades maestras
+INSERT INTO activities (name, description, created_by)
+VALUES 
+('Yoga', 'Disciplina física y mental que combina posturas, respiración y meditación.', (SELECT id FROM users WHERE email = 'carlos.owner@gym.com')),
+('Crossfit', 'Sistema de entrenamiento de fuerza y acondicionamiento basado en ejercicios funcionales.', (SELECT id FROM users WHERE email = 'carlos.owner@gym.com')),
+('Boxeo', 'Entrenamiento de combate enfocado en técnica, agilidad y resistencia cardiovascular.', (SELECT id FROM users WHERE email = 'carlos.owner@gym.com'));
+
+-- 2. Insertar Clases (La implementación de la actividad con un coach)
+INSERT INTO classes (activity_id, description, capacity_limit, duration_minutes, default_coach_id, created_by)
+VALUES 
+-- Yoga con Lucía
+((SELECT id FROM activities WHERE name = 'Yoga'), 'Yoga Flow nivel intermedio', 15, 60, (SELECT id FROM users WHERE email = 'lucia.coach@gym.com'), (SELECT id FROM users WHERE email = 'carlos.owner@gym.com')),
+
+-- Crossfit con Marcos
+((SELECT id FROM activities WHERE name = 'Crossfit'), 'WOD de alta intensidad para todos los niveles', 20, 50, (SELECT id FROM users WHERE email = 'marcos.coach@gym.com'), (SELECT id FROM users WHERE email = 'carlos.owner@gym.com')),
+
+-- Boxeo con el Propietario (Carlos también entrena)
+((SELECT id FROM activities WHERE name = 'Boxeo'), 'Técnica de golpeo y saco pesado', 10, 90, (SELECT id FROM users WHERE email = 'carlos.owner@gym.com'), (SELECT id FROM users WHERE email = 'carlos.owner@gym.com'));
+
+
+CREATE TABLE IF NOT EXISTS plans (
+    id GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(100) NOT NULL, -- Ej: '2xSemana', 'Bono 10 clases'
+    type VARCHAR(20) NOT NULL, -- 'SUBSCRIPTION' (tarifas) o 'VOUCHER' (bonos)
+    credits INT, -- NULL para ilimitado, o número de clases para bonos
+    frequency_per_week INT, -- 2, 3 o NULL (ilimitado)
+    duration_days INT, -- Especialmente para bonos (ej: 45)
+    daily_limit INT DEFAULT 1, -- Por defecto 1 clase al día
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS plan_activities (
+    plan_id INT REFERENCES plans(id) ON DELETE CASCADE,
+    activity_id INT REFERENCES activities(id) ON DELETE CASCADE,
+    PRIMARY KEY (plan_id, activity_id)
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+    id GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    class_id INT REFERENCES classes(id) ON DELETE RESTRICT,
+    coach_id INT REFERENCES users(id), -- El entrenador real de ese día
+    start_time TIMESTAMPTZ NOT NULL,
+    end_time TIMESTAMPTZ NOT NULL,
+    capacity_limit INT NOT NULL, -- Permite al dueño variar el cupo por sesión
+    published_at TIMESTAMPTZ, -- El domingo a las 19:00 que decida el dueño
+    is_special BOOLEAN DEFAULT FALSE, -- Para clases que no descuentan de tarifa
+    status VARCHAR(20) DEFAULT 'SCHEDULED', -- 'SCHEDULED', 'CANCELLED', 'FINISHED'
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
