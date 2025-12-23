@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS classes (
     id GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     activity_id INT NOT NULL,
     description TEXT,
+    duration_minutes INT NOT NULL DEFAULT 55,
     capacity_limit INT NOT NULL,
     default_coach_id INT NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
@@ -103,16 +104,17 @@ VALUES
 ('Boxeo', 'Entrenamiento de combate enfocado en técnica, agilidad y resistencia cardiovascular.', (SELECT id FROM users WHERE email = 'carlos.owner@gym.com'));
 
 -- 2. Insertar Clases (La implementación de la actividad con un coach)
-INSERT INTO classes (activity_id, description, capacity_limit, default_coach_id, created_by)
+INSERT INTO classes (activity_id, description, capacity_limit, default_coach_id, duration_minutes, created_by)
 VALUES 
 -- Yoga con Lucía
-((SELECT id FROM activities WHERE name = 'Yoga'), 'Yoga Flow nivel intermedio', 15, (SELECT id FROM users WHERE email = 'lucia.coach@gym.com'), (SELECT id FROM users WHERE email = 'carlos.owner@gym.com')),
+((SELECT id FROM activities WHERE name = 'Yoga'), 'Yoga Flow nivel intermedio', 15, 55, (SELECT id FROM users WHERE email = 'lucia.coach@gym.com'), (SELECT id FROM users WHERE email = 'carlos.owner@gym.com')),
 
 -- Crossfit con Marcos
-((SELECT id FROM activities WHERE name = 'Crossfit'), 'WOD de alta intensidad para todos los niveles', 20, (SELECT id FROM users WHERE email = 'marcos.coach@gym.com'), (SELECT id FROM users WHERE email = 'carlos.owner@gym.com')),
+((SELECT id FROM activities WHERE name = 'Crossfit'), 'WOD de alta intensidad para todos los niveles', 20, 55, (SELECT id FROM users WHERE email = 'marcos.coach@gym.com'), (SELECT id FROM users WHERE email = 'carlos.owner@gym.com')),
 
 -- Boxeo con el Propietario (Carlos también entrena)
-((SELECT id FROM activities WHERE name = 'Boxeo'), 'Técnica de golpeo y saco pesado', 10, (SELECT id FROM users WHERE email = 'carlos.owner@gym.com'), (SELECT id FROM users WHERE email = 'carlos.owner@gym.com'));
+((SELECT id FROM activities WHERE name = 'Boxeo'), 'Técnica de golpeo y saco pesado', 10, 55, (SELECT id FROM users WHERE email = 'carlos.owner@gym.com'), (SELECT id FROM users WHERE email = 'carlos.owner@gym.com'));
+
 
 
 CREATE TABLE IF NOT EXISTS plans (
